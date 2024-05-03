@@ -29,8 +29,10 @@ import android.telephony.CellIdentityNr;
 import android.telephony.CellInfo;
 import android.telephony.CellInfoLte;
 import android.telephony.CellInfoNr;
+import android.telephony.CellSignalStrength;
 import android.telephony.CellSignalStrengthLte;
 import android.telephony.CellSignalStrengthNr;
+import android.telephony.SignalStrength;
 import android.telephony.TelephonyCallback;
 import android.telephony.TelephonyDisplayInfo;
 import android.telephony.TelephonyManager;
@@ -46,12 +48,15 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;*/
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -153,6 +158,16 @@ public class MainActivity extends AppCompatActivity {
             }
         }, 0, 5, TimeUnit.SECONDS);
     }
+    public void updateLteRsrp(int rsrp){
+        if(rsrp != 0){
+            this.cio.Rsrp = rsrp;
+        }
+    }
+    public void updateSsRsrp(int ssrsrp){
+        if(ssrsrp != 0){
+            this.cio.SsRsrp = ssrsrp;
+        }
+    }
     public void enableCloseGuard(){
         try {
             Class.forName("dalvik.system.CloseGuard")
@@ -194,6 +209,8 @@ public class MainActivity extends AppCompatActivity {
             csv_writer = new FileWriter(csv,true);
             csv_writer.write(csv_string);
             csv_writer.close();
+            this.cio.Speed = 0.0;
+            this.cio.Upload = 0.0;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -220,13 +237,14 @@ public class MainActivity extends AppCompatActivity {
         writeCsvRow(this.cio);
     }
     public class SpeedTestTask extends AsyncTask<Void, Void, Integer> {
-//        String testUrl = "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/testing.bin";
-//        String begin_multipart = "------WebKitFormBoundary0CEaUEFum5RO9St7\nContent-Disposition: form-data; name=\"uploadfile[]\"; filename=\"upload_test.bin\"\nContent-Type: application/octet-stream\n\n";
-//        String end_multipart = "\n------WebKitFormBoundary0CEaUEFum5RO9St7\nContent-Disposition: form-data; name=\"submit\"\n\nSubmit\n------WebKitFormBoundary0CEaUEFum5RO9St7--\n\n";
+        //String testUrl = "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/testing.bin";
+        String begin_multipart = "------WebKitFormBoundary0CEaUEFum5RO9St7\nContent-Disposition: form-data; name=\"uploadfile[]\"; filename=\"upload_test.bin\"\nContent-Type: application/octet-stream\n\n";
+        String end_multipart = "\n------WebKitFormBoundary0CEaUEFum5RO9St7\nContent-Disposition: form-data; name=\"submit\"\n\nSubmit\n------WebKitFormBoundary0CEaUEFum5RO9St7--\n\n";
+
         @Override
         protected Integer doInBackground(Void...Params) {
             try {
-                Log.i("nr5gperf","begin speed test task");
+                Log.i("nr5gperf","doInBackground");
                 DownloadTest();
                 UploadTest();
                 getPubIP();
@@ -236,86 +254,67 @@ public class MainActivity extends AppCompatActivity {
                 return 1;
             }
         }
+
         @Override
-        protected void onPostExecute(Integer result) {
-            Log.i("nr5gperf","doInBackground: " + String.valueOf(result) + "\nonPostExecute");
+        protected void onPostExecute(Integer results) {
+            Log.i("nr5gperf","onPostExecute");
             updateTextViews();
-            updateCsv();
         }
         private void DownloadTest() throws IOException {
-            //"https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/testing.bin"
             Log.i("nr5gperf","begin download test");
             byte[] buffer = new byte[32];
-            OkHttpClient client = new OkHttpClient();
-            Request request = new Request.Builder()
-                    .url("https://fast.nanick.org/uploads/testing.bin")
-                    .build();
+            Double download_mbps = 0.0;
+            InputStream inputStream = ((HttpURLConnection) new URL("https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/testing.bin").openConnection()).getInputStream();
+            int bytesRead;
+            int totalBytesRead = 0;
             Double startTime = Double.valueOf(System.currentTimeMillis());
-            client.newCall(request).enqueue(new Callback() {
-                @Override
-                public void onFailure(Call call, IOException e) {
-                    e.printStackTrace();
-                }
-                @Override
-                public void onResponse(Call call, Response response) throws IOException {
-                    if (!response.isSuccessful()) {
-                        response.body().close();
-                        throw new IOException("Failed to download file: " + response);
-                    }
-                    int bytesRead;
-                    int totalBytesRead = 0;
-                    Double startTime = Double.valueOf(System.currentTimeMillis());
-                    InputStream inputStream = response.body().byteStream();
-                    while ((bytesRead = inputStream.read(buffer)) != -1) {
-                        totalBytesRead += bytesRead;
-                    }
-                    Double endTime = Double.valueOf(System.currentTimeMillis());
-                    Double totalSeconds = (endTime - startTime) / 1000;
-                    final Double download_mbps = 100 / totalSeconds;
-                    inputStream.close();
-                    response.body().close();
-                    Log.i("nr5gperf","download: " + download_mbps);
-                    updateDownloadSpeed(download_mbps);
-                }
-            });
-
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                totalBytesRead += bytesRead;
+            }
+            Double endTime = Double.valueOf(System.currentTimeMillis());
+            Double totalSeconds = (endTime - startTime) / 1000;
+            download_mbps = 100 / totalSeconds;
+            inputStream.close();
+            Log.i("nr5gperf","download: " + download_mbps);
+            updateDownloadSpeed(download_mbps);
         }
         private void UploadTest() throws IOException {
             Log.i("nr5gperf","begin upload test");
-            OkHttpClient client = new OkHttpClient();
-            String boundary = "----WebKitFormBoundary0CEaUEFum5RO9St7";
             File f = new File(MainActivity.this.getExternalFilesDir(null),"upload_test.bin");
-            RequestBody requestBody = new MultipartBody.Builder(boundary)
-                    .setType(MultipartBody.FORM)
-                    .addFormDataPart("uploadfile[]", f.getName(), RequestBody.create(f, MediaType.parse("application/octet-stream")))
-                    .addFormDataPart("submit","Submit")
-                    .build();
-            Request request = new Request.Builder()
-                    .url("https://fast.nanick.org/upload.php")
-                    .post(requestBody)
-                    .build();
+            long size = f.length();
+            FileInputStream fileInputStream = new FileInputStream(f);
+            System.out.println(size +" bytes in upload file");
+            byte[] bufferUp = new byte[32];
+            Double upload_mbps = 0.0;
             Double startTimeUp = Double.valueOf(System.currentTimeMillis());
-            client.newCall(request).enqueue(new Callback() {
-                @Override
-                public void onFailure(Call call, IOException e) {
-                    e.printStackTrace();
-                }
-                @Override
-                public void onResponse(Call call, Response response) throws IOException {
-                    if (!response.isSuccessful()) {
-                        response.body().close();
-                        throw new IOException("Unexpected code " + response);
-                    }
-                    Double endTimeUp = Double.valueOf(System.currentTimeMillis());
-                    Double totalSecondsUp = (endTimeUp - startTimeUp) / 1000;
-                    final Double upload_mbps = 10 / totalSecondsUp;
-                    Log.i("nr5gperf","upload: " + upload_mbps);
-                    response.body().close();
-                    updateUploadSpeed(upload_mbps);
-                }
-            });
+            HttpURLConnection connection = (HttpURLConnection) new URL("https://fast.nanick.org/upload.php").openConnection();
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + "----WebKitFormBoundary0CEaUEFum5RO9St7");
+            OutputStream os = connection.getOutputStream();
+            DataOutputStream outputStream = new DataOutputStream(os);
+            outputStream.writeBytes(this.begin_multipart);
+            int bytesReadUp;
+
+            while ((bytesReadUp = fileInputStream.read(bufferUp)) != -1) {
+                outputStream.write(bufferUp, 0, bytesReadUp);
+            }
+            outputStream.writeBytes(this.end_multipart);
+            fileInputStream.close();
+            outputStream.flush();
+            outputStream.close();
+            os.close();
+            connection.getInputStream().close();
+            int responseCode = connection.getResponseCode();
+            Double endTimeUp = Double.valueOf(System.currentTimeMillis());
+            Double totalSecondsUp = (endTimeUp - startTimeUp) / 1000;
+            upload_mbps = 10 / totalSecondsUp;
+            connection.disconnect();
+            Log.i("nr5gperf","upload: " + upload_mbps);
+            updateUploadSpeed(upload_mbps);
         }
         public void getPubIP() throws IOException {
+            StringBuilder ipsb = new StringBuilder();
             InputStream inputStream = ((HttpURLConnection) new URL("https://fast.nanick.org/ip.php").openConnection()).getInputStream();
             StringBuilder textBuilder = new StringBuilder();
             Reader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
@@ -374,13 +373,14 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                tv.setHeight(height);
+                //tv.setHeight(height);
                 tv.setEnabled(true);
                 tv.setVisibility(View.VISIBLE);
             }
         });
     }
     public void writeTextViews(CellInfoObj cio){
+        cio.TimeStamp = System.currentTimeMillis();
         fixTextViewHeight(((TextView)findViewById(R.id.rsrp)),this.fortydpi);
         fixTextViewHeight(((TextView)findViewById(R.id.rsrp_label)),this.fortydpi);
         ((TextView)findViewById(R.id.rsrp)).setText(cio.Rsrp+" dBm");
@@ -479,6 +479,7 @@ public class MainActivity extends AppCompatActivity {
             fixTextViewHeight(((TextView)findViewById(R.id.nrtac_label)),this.fortydpi);
             ((TextView)findViewById(R.id.nrtac)).setText(cio.NRTac+"");
         }
+        updateCsv();
     }
     public LteBands[] BandsFromJson(String jsonString){
         ObjectMapper om = new ObjectMapper();
@@ -572,7 +573,7 @@ public class MainActivity extends AppCompatActivity {
         public long TimeStamp;
     }
     public static String phoneState;
-    public class DiCb extends TelephonyCallback implements TelephonyCallback.DisplayInfoListener,TelephonyCallback.CellInfoListener {
+    public class DiCb extends TelephonyCallback implements TelephonyCallback.DisplayInfoListener,TelephonyCallback.CellInfoListener,TelephonyCallback.SignalStrengthsListener {
         public String GetNetworkOverride(int networkOverride){
             switch(networkOverride){
                 case TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NONE:
@@ -589,6 +590,30 @@ public class MainActivity extends AppCompatActivity {
                     return "NR Advanced";
                 default:
                     return "Unknown";
+            }
+        }
+        @Override
+        public void onSignalStrengthsChanged(SignalStrength signalStrength){
+            if(signalStrength != null){
+                List<CellSignalStrength> signal = signalStrength.getCellSignalStrengths();
+                CellSignalStrength p = signal.get(0);
+                if(p instanceof CellSignalStrengthLte){
+                    CellSignalStrengthLte pLte = (CellSignalStrengthLte)p;
+                    int rsrp = pLte.getRsrp();
+                    updateLteRsrp(rsrp);
+                }
+                if(p instanceof CellSignalStrengthNr){
+                    CellSignalStrengthNr pNr = (CellSignalStrengthNr)p;
+                    int ssrsrp = pNr.getSsRsrp();
+                    updateSsRsrp(ssrsrp);
+                }
+                for(CellSignalStrength s : signal){
+                    if(s instanceof CellSignalStrengthNr){
+                        CellSignalStrengthNr pNr = (CellSignalStrengthNr)s;
+                        int ssrsrp = pNr.getSsRsrp();
+                        updateSsRsrp(ssrsrp);
+                    }
+                }
             }
         }
         @Override
@@ -611,13 +636,9 @@ public class MainActivity extends AppCompatActivity {
     private void updateDisplayInfo(String state){
         if(state != null){
             this.cio.Rat = state;
-            ((TextView)findViewById(R.id.rat)).setHeight(this.fortydpi);
-            ((TextView)findViewById(R.id.rat_label)).setHeight(this.fortydpi);
-            ((TextView)findViewById(R.id.rat)).setEnabled(true);
-            ((TextView)findViewById(R.id.rat)).setVisibility(View.VISIBLE);
+            fixTextViewHeight(((TextView)findViewById(R.id.rat)),this.fortydpi);
+            fixTextViewHeight(((TextView)findViewById(R.id.rat_label)),this.fortydpi);
             ((TextView)findViewById(R.id.rat)).setText(this.cio.Rat);
-            ((TextView)findViewById(R.id.rat_label)).setVisibility(View.VISIBLE);
-            ((TextView)findViewById(R.id.rat_label)).setEnabled(true);
         }
     }
     @SuppressLint("MissingPermission")
@@ -655,15 +676,6 @@ public class MainActivity extends AppCompatActivity {
             CellInfoNr cinr = (CellInfoNr)cellInfo;
             CellSignalStrengthNr signalStrengthNr = (CellSignalStrengthNr) ((CellInfoNr)cellInfo).getCellSignalStrength();
             CellIdentityNr cellIdNr = (CellIdentityNr) ((CellInfoNr)cellInfo).getCellIdentity();
-            int[] nrbands = cellIdNr.getBands();
-            StringJoiner sj = new StringJoiner(",");
-            for(int b : nrbands){
-                sj.add(String.valueOf(b));
-            }
-            String nrbands_join = sj.toString();
-            Log.i("nr5gperf","CellIdentityNr.getBands();\n" + nrbands_join);
-            String nci = String.valueOf(cellIdNr.getNci());
-            Log.i("nr5gperf","CellIdentityNr.getNci();\n" + nci);
             cio.NRARFCN = cellIdNr.getNrarfcn();
             cio.NRPci = cellIdNr.getPci();
             cio.NRTac = cellIdNr.getTac();
@@ -827,19 +839,11 @@ public class MainActivity extends AppCompatActivity {
         this.Longitude = location.getLongitude();
         this.cio.Lat = this.Latitude;
         this.cio.Lng = this.Longitude;
-        ((TextView)findViewById(R.id.latitude)).setHeight(this.fortydpi);
-        ((TextView)findViewById(R.id.latitude_label)).setHeight(this.fortydpi);
-        ((TextView)findViewById(R.id.latitude)).setEnabled(true);
-        ((TextView)findViewById(R.id.latitude)).setVisibility(View.VISIBLE);
+        fixTextViewHeight(((TextView)findViewById(R.id.latitude)),this.fortydpi);
+        fixTextViewHeight(((TextView)findViewById(R.id.latitude_label)),this.fortydpi);
+        fixTextViewHeight(((TextView)findViewById(R.id.longitude)),this.fortydpi);
+        fixTextViewHeight(((TextView)findViewById(R.id.longitude_label)),this.fortydpi);
         ((TextView)findViewById(R.id.latitude)).setText(this.Latitude+"");
-        ((TextView)findViewById(R.id.latitude_label)).setVisibility(View.VISIBLE);
-        ((TextView)findViewById(R.id.latitude_label)).setEnabled(true);
-        ((TextView)findViewById(R.id.longitude)).setHeight(this.fortydpi);
-        ((TextView)findViewById(R.id.longitude_label)).setHeight(this.fortydpi);
-        ((TextView)findViewById(R.id.longitude)).setEnabled(true);
-        ((TextView)findViewById(R.id.longitude)).setVisibility(View.VISIBLE);
         ((TextView)findViewById(R.id.longitude)).setText(this.Longitude+"");
-        ((TextView)findViewById(R.id.longitude_label)).setVisibility(View.VISIBLE);
-        ((TextView)findViewById(R.id.longitude_label)).setEnabled(true);
     }
 }
