@@ -16,7 +16,7 @@
         android:icon="@drawable/tower_icon"
         android:configChanges="keyboardHidden|orientation|screenSize"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/circle_icon"
+        android:roundIcon="@drawable/new_circle_icon"
         android:supportsRtl="true"
         android:theme="@style/Theme.CellPerf"
         tools:targetApi="31">
