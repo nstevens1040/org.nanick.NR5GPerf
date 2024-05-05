@@ -172,6 +172,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     public void writeCsvRow(CellInfoObj cio){
+        cio.TimeStamp = System.currentTimeMillis();
         StringBuilder csvstring = new StringBuilder();
         csvstring.append(cio.Rsrp+",");
         csvstring.append(cio.SsRsrp+",");
@@ -267,73 +268,15 @@ public class MainActivity extends AppCompatActivity {
                 //CellInfoObj cio = Params[0];
 
                 // BEGIN DOWNLOAD TEST
-                byte[] buffer = new byte[32];
-                Double download_mbps = 0.0;
-                InputStream inputStream = ((HttpURLConnection) new URL("https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/testing.bin").openConnection()).getInputStream();
-                int bytesRead;
-                int totalBytesRead = 0;
-                Double startTime = Double.valueOf(System.currentTimeMillis());
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    totalBytesRead += bytesRead;
-                }
-                Double endTime = Double.valueOf(System.currentTimeMillis());
-                Double totalSeconds = (endTime - startTime) / 1000;
-                download_mbps = 100 / totalSeconds;
-                inputStream.close();
-                Log.i("nr5gperf","download: " + download_mbps);
-                cellio.Speed = download_mbps;
+                cellio = DownloadTest(cellio);
                 //updateDownloadSpeed(download_mbps);
                 // END DOWNLOAD TEST
                 // BEGIN UPLOAD TEST
-                File f = new File(MainActivity.this.getExternalFilesDir(null),"upload_test.bin");
-                long size = f.length();
-                FileInputStream fileInputStream = new FileInputStream(f);
-                System.out.println(size +" bytes in upload file");
-                byte[] bufferUp = new byte[32];
-                Double upload_mbps = 0.0;
-                Double startTimeUp = Double.valueOf(System.currentTimeMillis());
-                HttpURLConnection connection = (HttpURLConnection) new URL("https://fast.nanick.org/upload.php").openConnection();
-                connection.setRequestMethod("POST");
-                connection.setDoOutput(true);
-                connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + "----WebKitFormBoundary0CEaUEFum5RO9St7");
-                OutputStream os = connection.getOutputStream();
-                DataOutputStream outputStream = new DataOutputStream(os);
-                outputStream.writeBytes(this.begin_multipart);
-                int bytesReadUp;
-                while ((bytesReadUp = fileInputStream.read(bufferUp)) != -1) {
-                    outputStream.write(bufferUp, 0, bytesReadUp);
-                }
-                outputStream.writeBytes(this.end_multipart);
-                fileInputStream.close();
-                outputStream.flush();
-                outputStream.close();
-                os.close();
-                connection.getInputStream().close();
-                int responseCode = connection.getResponseCode();
-                Double endTimeUp = Double.valueOf(System.currentTimeMillis());
-                Double totalSecondsUp = (endTimeUp - startTimeUp) / 1000;
-                upload_mbps = 10 / totalSecondsUp;
-                connection.disconnect();
-                Log.i("nr5gperf","upload: " + upload_mbps);
-                cellio.Upload = upload_mbps;
+                cellio = UploadTest(cellio);
                 //updateUploadSpeed(upload_mbps);
                 // END UPLOAD TEST
                 // BEGIN PUBLIC IP
-                StringBuilder ipsb = new StringBuilder();
-                InputStream iPinputStream = ((HttpURLConnection) new URL("https://fast.nanick.org/ip.php").openConnection()).getInputStream();
-                StringBuilder textBuilder = new StringBuilder();
-                Reader reader = new BufferedReader(new InputStreamReader(iPinputStream, StandardCharsets.UTF_8));
-                int c = 0;
-                while ((c = reader.read()) != -1) {
-                    if((char)c != (char)10 && (char)c != (char)13){
-                        textBuilder.append((char) c);
-                    }
-                }
-                String ipaddress = textBuilder.toString();
-                Log.i("nr5gperf","ipaddress: " + ipaddress);
-                iPinputStream.close();
-                reader.close();
-                cellio.IPAddress = ipaddress;
+                cellio = getPubIP(cellio);
 //                updatePublicIP(ipaddress);
                 // END PUBLIC IP
                 return cellio;
@@ -350,17 +293,79 @@ public class MainActivity extends AppCompatActivity {
             updateTextViews(results);
             updateCsv(results);
         }
-//        private void DownloadTest() throws IOException {
-//            Log.i("nr5gperf","begin download test");
-//
-//        }
-//        private void UploadTest() throws IOException {
-//            Log.i("nr5gperf","begin upload test");
-//
-//        }
-//        public void getPubIP() throws IOException {
-//
-//        }
+        private CellInfoObj DownloadTest(CellInfoObj cellios) throws IOException {
+            Log.i("nr5gperf","begin download test");
+            byte[] buffer = new byte[32];
+            Double download_mbps = 0.0;
+            InputStream inputStream = ((HttpURLConnection) new URL("https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/testing.bin").openConnection()).getInputStream();
+            int bytesRead;
+            int totalBytesRead = 0;
+            Double startTime = Double.valueOf(System.currentTimeMillis());
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                totalBytesRead += bytesRead;
+            }
+            Double endTime = Double.valueOf(System.currentTimeMillis());
+            Double totalSeconds = (endTime - startTime) / 1000;
+            download_mbps = 100 / totalSeconds;
+            inputStream.close();
+            Log.i("nr5gperf","download: " + download_mbps);
+            cellios.Speed = download_mbps;
+            return cellios;
+
+        }
+        private CellInfoObj UploadTest(CellInfoObj cellios) throws IOException {
+            Log.i("nr5gperf","begin upload test");
+            File f = new File(MainActivity.this.getExternalFilesDir(null),"upload_test.bin");
+            long size = f.length();
+            FileInputStream fileInputStream = new FileInputStream(f);
+            System.out.println(size +" bytes in upload file");
+            byte[] bufferUp = new byte[32];
+            Double upload_mbps = 0.0;
+            Double startTimeUp = Double.valueOf(System.currentTimeMillis());
+            HttpURLConnection connection = (HttpURLConnection) new URL("https://fast.nanick.org/upload.php").openConnection();
+            connection.setRequestMethod("POST");
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + "----WebKitFormBoundary0CEaUEFum5RO9St7");
+            OutputStream os = connection.getOutputStream();
+            DataOutputStream outputStream = new DataOutputStream(os);
+            outputStream.writeBytes(this.begin_multipart);
+            int bytesReadUp;
+            while ((bytesReadUp = fileInputStream.read(bufferUp)) != -1) {
+                outputStream.write(bufferUp, 0, bytesReadUp);
+            }
+            outputStream.writeBytes(this.end_multipart);
+            fileInputStream.close();
+            outputStream.flush();
+            outputStream.close();
+            os.close();
+            connection.getInputStream().close();
+            int responseCode = connection.getResponseCode();
+            Double endTimeUp = Double.valueOf(System.currentTimeMillis());
+            Double totalSecondsUp = (endTimeUp - startTimeUp) / 1000;
+            upload_mbps = 10 / totalSecondsUp;
+            connection.disconnect();
+            Log.i("nr5gperf","upload: " + upload_mbps);
+            cellios.Upload = upload_mbps;
+            return cellios;
+
+        }
+        public CellInfoObj getPubIP(CellInfoObj cellios) throws IOException {
+            InputStream iPinputStream = ((HttpURLConnection) new URL("https://fast.nanick.org/ip.php").openConnection()).getInputStream();
+            StringBuilder textBuilder = new StringBuilder();
+            Reader reader = new BufferedReader(new InputStreamReader(iPinputStream, StandardCharsets.UTF_8));
+            int c = 0;
+            while ((c = reader.read()) != -1) {
+                if((char)c != (char)10 && (char)c != (char)13){
+                    textBuilder.append((char) c);
+                }
+            }
+            String ipaddress = textBuilder.toString();
+            Log.i("nr5gperf","ipaddress: " + ipaddress);
+            iPinputStream.close();
+            reader.close();
+            cellios.IPAddress = ipaddress;
+            return cellios;
+        }
     }
     public String parseNetworkType(int networkType){
         switch (networkType) {
