@@ -146,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
         executorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                new SpeedTestTask().execute(cio);
+                new SpeedTestTask(cio).execute();
 //                SpeedTestTask test = new SpeedTestTask();
 //                test.execute();
             }
@@ -199,6 +199,7 @@ public class MainActivity extends AppCompatActivity {
         csvstring.append(cio.NR5GBandName+",");
         csvstring.append(cio.TimeStamp+"\n");
         String csv_string = csvstring.toString();
+        Log.i("nr5gperf",csv_string);
         try {
             csv_writer = new FileWriter(csv,true);
             csv_writer.write(csv_string);
@@ -224,14 +225,14 @@ public class MainActivity extends AppCompatActivity {
 //            this.cio.IPAddress = ipaddress;
 //        }
 //    }
-    public void updateTextViews(){
+    public void updateTextViews(CellInfoObj cellio){
 //        while(this.cio.Band == 0 || this.cio.Bandwidth == 0 || this.cio.CellId == 0 || this.cio.EARFCN == 0 || this.cio.eNodeB == 0 || this.cio.Lat == 0.0 || this.cio.Lng == 0.0 || this.cio.Pci == 0 || this.cio.Rsrp == 0){
 //            Log.i("nr5gperf","waiting for cellular metrics");
 //        }
-        writeTextViews(this.cio);
+        writeTextViews(cellio);
     }
-    public void updateCsv(){
-        writeCsvRow(this.cio);
+    public void updateCsv(CellInfoObj cellio){
+        writeCsvRow(cellio);
     }
     public class SpeedTestResults {
         public Double DownloadSpeed;
@@ -246,19 +247,24 @@ public class MainActivity extends AppCompatActivity {
             this.PublicIPAddress = ipaddress;
         }
     }
-    public class SpeedTestTask extends AsyncTask<CellInfoObj, Void, CellInfoObj> {
+    public class SpeedTestTask extends AsyncTask<Void, Void, CellInfoObj> {
+        public SpeedTestTask(CellInfoObj cellInfoObj){
+            this.cellio = cellInfoObj;
+            //this.cellio = new CellInfoObj();
+        }
+        CellInfoObj cellio;
         //String testUrl = "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/testing.bin";
         String begin_multipart = "------WebKitFormBoundary0CEaUEFum5RO9St7\nContent-Disposition: form-data; name=\"uploadfile[]\"; filename=\"upload_test.bin\"\nContent-Type: application/octet-stream\n\n";
         String end_multipart = "\n------WebKitFormBoundary0CEaUEFum5RO9St7\nContent-Disposition: form-data; name=\"submit\"\n\nSubmit\n------WebKitFormBoundary0CEaUEFum5RO9St7--\n\n";
         @Override
-        protected CellInfoObj doInBackground(CellInfoObj...Params) {
+        protected CellInfoObj doInBackground(Void...Params) {
             try {
                 Log.i("nr5gperf","doInBackground");
 
 //                DownloadTest();
 //                UploadTest();
 //                getPubIP();
-                CellInfoObj cio = Params[0];
+                //CellInfoObj cio = Params[0];
 
                 // BEGIN DOWNLOAD TEST
                 byte[] buffer = new byte[32];
@@ -275,7 +281,7 @@ public class MainActivity extends AppCompatActivity {
                 download_mbps = 100 / totalSeconds;
                 inputStream.close();
                 Log.i("nr5gperf","download: " + download_mbps);
-                cio.Speed = download_mbps;
+                cellio.Speed = download_mbps;
                 //updateDownloadSpeed(download_mbps);
                 // END DOWNLOAD TEST
                 // BEGIN UPLOAD TEST
@@ -309,7 +315,7 @@ public class MainActivity extends AppCompatActivity {
                 upload_mbps = 10 / totalSecondsUp;
                 connection.disconnect();
                 Log.i("nr5gperf","upload: " + upload_mbps);
-                cio.Upload = upload_mbps;
+                cellio.Upload = upload_mbps;
                 //updateUploadSpeed(upload_mbps);
                 // END UPLOAD TEST
                 // BEGIN PUBLIC IP
@@ -327,13 +333,13 @@ public class MainActivity extends AppCompatActivity {
                 Log.i("nr5gperf","ipaddress: " + ipaddress);
                 iPinputStream.close();
                 reader.close();
-                cio.IPAddress = ipaddress;
+                cellio.IPAddress = ipaddress;
 //                updatePublicIP(ipaddress);
                 // END PUBLIC IP
-                return cio;
+                return cellio;
             } catch (IOException e) {
                 e.printStackTrace();
-                return cio;
+                return cellio;
             }
         }
 
@@ -341,7 +347,8 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(CellInfoObj results) {
             Log.i("nr5gperf","onPostExecute");
 
-            updateTextViews();
+            updateTextViews(results);
+            updateCsv(results);
         }
 //        private void DownloadTest() throws IOException {
 //            Log.i("nr5gperf","begin download test");
@@ -419,76 +426,75 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-    public void writeTextViews(CellInfoObj cio){
-        fixTextViewHeight(allTextViews.rsrp,this.fortydpi,cio.Rsrp+" dBm");
+    public void writeTextViews(CellInfoObj cellio){
+        fixTextViewHeight(allTextViews.rsrp,this.fortydpi,cellio.Rsrp+" dBm");
         fixTextViewHeight(allTextViews.rsrp_label,this.fortydpi);
-        if(cio.SsRsrp != 0){
+        if(cellio.SsRsrp != 0){
             fixTextViewHeight(allTextViews.ssrsrp_label,this.fortydpi);
-            fixTextViewHeight(allTextViews.ssrsrp,this.fortydpi,cio.SsRsrp+" dBm");
+            fixTextViewHeight(allTextViews.ssrsrp,this.fortydpi,cellio.SsRsrp+" dBm");
         }
-        if(cio.Speed > 0){
+        if(cellio.Speed > 0){
             fixTextViewHeight(allTextViews.downloadspeed_label,this.fortydpi);
-            fixTextViewHeight(allTextViews.downloadspeed,this.fortydpi,new DecimalFormat("0.00").format(cio.Speed)+" Mbps");
+            fixTextViewHeight(allTextViews.downloadspeed,this.fortydpi,new DecimalFormat("0.00").format(cellio.Speed)+" Mbps");
         }
-        if(cio.Upload > 0){
+        if(cellio.Upload > 0){
             fixTextViewHeight(allTextViews.uploadspeed_label,this.fortydpi);
-            fixTextViewHeight(allTextViews.uploadspeed,this.fortydpi,new DecimalFormat("0.00").format(cio.Upload)+" Mbps");
+            fixTextViewHeight(allTextViews.uploadspeed,this.fortydpi,new DecimalFormat("0.00").format(cellio.Upload)+" Mbps");
         }
-        if(cio.TimingAdvance != Integer.MAX_VALUE){
+        if(cellio.TimingAdvance != Integer.MAX_VALUE){
             fixTextViewHeight(allTextViews.ta_label,this.fortydpi);
-            fixTextViewHeight(allTextViews.ta,this.fortydpi,cio.TimingAdvance+"");
+            fixTextViewHeight(allTextViews.ta,this.fortydpi,cellio.TimingAdvance+"");
         }
         fixTextViewHeight(allTextViews.plmn_label,this.fortydpi);
-        fixTextViewHeight(allTextViews.plmn,this.fortydpi,cio.Plmn);
+        fixTextViewHeight(allTextViews.plmn,this.fortydpi,cellio.Plmn);
         fixTextViewHeight(allTextViews.lac_label,this.fortydpi);
-        fixTextViewHeight(allTextViews.lac,this.fortydpi,cio.Tac+"");
+        fixTextViewHeight(allTextViews.lac,this.fortydpi,cellio.Tac+"");
         fixTextViewHeight(allTextViews.cellid_label,this.fortydpi);
-        fixTextViewHeight(allTextViews.cellid,this.fortydpi,cio.CellId+"");
+        fixTextViewHeight(allTextViews.cellid,this.fortydpi,cellio.CellId+"");
         fixTextViewHeight(allTextViews.enodeb_label,this.fortydpi);
-        fixTextViewHeight(allTextViews.enodeb,this.fortydpi,cio.eNodeB+"");
+        fixTextViewHeight(allTextViews.enodeb,this.fortydpi,cellio.eNodeB+"");
         fixTextViewHeight(allTextViews.rat_label,this.fortydpi);
-        fixTextViewHeight(allTextViews.rat,this.fortydpi,cio.Rat);
+        fixTextViewHeight(allTextViews.rat,this.fortydpi,cellio.Rat);
         fixTextViewHeight(allTextViews.latitude_label,this.fortydpi);
-        fixTextViewHeight(allTextViews.latitude,this.fortydpi,cio.Lat+"");
+        fixTextViewHeight(allTextViews.latitude,this.fortydpi,cellio.Lat+"");
         fixTextViewHeight(allTextViews.longitude_label,this.fortydpi);
-        fixTextViewHeight(allTextViews.longitude,this.fortydpi,cio.Lng+"");
+        fixTextViewHeight(allTextViews.longitude,this.fortydpi,cellio.Lng+"");
         fixTextViewHeight(allTextViews.channel_label,this.fortydpi);
-        fixTextViewHeight(allTextViews.channel,this.fortydpi,cio.EARFCN+"");
-        if(cio.NRARFCN != 0){
+        fixTextViewHeight(allTextViews.channel,this.fortydpi,cellio.EARFCN+"");
+        if(cellio.NRARFCN != 0){
             fixTextViewHeight(allTextViews.nrarfcn_label,this.fortydpi);
-            fixTextViewHeight(allTextViews.nrarfcn,this.fortydpi,cio.NRARFCN+"");
+            fixTextViewHeight(allTextViews.nrarfcn,this.fortydpi,cellio.NRARFCN+"");
         }
         fixTextViewHeight(allTextViews.lte_band_label,this.fortydpi);
-        fixTextViewHeight(allTextViews.lte_band,this.fortydpi,cio.Band+"");
-        if(cio.NR5GBandName != null){
+        fixTextViewHeight(allTextViews.lte_band,this.fortydpi,cellio.Band+"");
+        if(cellio.NR5GBandName != null){
             fixTextViewHeight(allTextViews.nr5gband_label,this.fortydpi);
-            fixTextViewHeight(allTextViews.nr5gband,this.fortydpi,cio.NR5GBandName);
+            fixTextViewHeight(allTextViews.nr5gband,this.fortydpi,cellio.NR5GBandName);
         }
         fixTextViewHeight(allTextViews.spectrum_label,this.fortydpi);
-        fixTextViewHeight(allTextViews.spectrum,this.fortydpi,cio.Spectrum);
-        if(cio.NRSpectrum != null){
+        fixTextViewHeight(allTextViews.spectrum,this.fortydpi,cellio.Spectrum);
+        if(cellio.NRSpectrum != null){
             fixTextViewHeight(allTextViews.nrspectrum_label,this.fortydpi);
-            fixTextViewHeight(allTextViews.nrspectrum,this.fortydpi,cio.NRSpectrum);
+            fixTextViewHeight(allTextViews.nrspectrum,this.fortydpi,cellio.NRSpectrum);
         }
-        if(cio.Bandwidth != 0){
+        if(cellio.Bandwidth != 0){
             fixTextViewHeight(allTextViews.bandwidth_label,this.fortydpi);
-            fixTextViewHeight(allTextViews.bandwidth,this.fortydpi,cio.Bandwidth+" MHz");
+            fixTextViewHeight(allTextViews.bandwidth,this.fortydpi,cellio.Bandwidth+" MHz");
         }
         fixTextViewHeight(allTextViews.pci_label,this.fortydpi);
-        fixTextViewHeight(allTextViews.pci,this.fortydpi,cio.Pci+"");
-        if(cio.NRPci != 0){
+        fixTextViewHeight(allTextViews.pci,this.fortydpi,cellio.Pci+"");
+        if(cellio.NRPci != 0){
             fixTextViewHeight(allTextViews.nrpci_label,this.fortydpi);
-            fixTextViewHeight(allTextViews.nrpci,this.fortydpi,cio.NRPci+"");
+            fixTextViewHeight(allTextViews.nrpci,this.fortydpi,cellio.NRPci+"");
         }
         fixTextViewHeight(allTextViews.rsrq_label,this.fortydpi);
-        fixTextViewHeight(allTextViews.rsrq,this.fortydpi,cio.Rsrq+"");
+        fixTextViewHeight(allTextViews.rsrq,this.fortydpi,cellio.Rsrq+"");
         fixTextViewHeight(allTextViews.ipaddress_label,this.fortydpi);
-        fixTextViewHeight(allTextViews.ipaddress,this.fortydpi,cio.IPAddress);
-        if(cio.NRTac != 0){
+        fixTextViewHeight(allTextViews.ipaddress,this.fortydpi,cellio.IPAddress);
+        if(cellio.NRTac != 0){
             fixTextViewHeight(allTextViews.nrtac_label,this.fortydpi);
-            fixTextViewHeight(allTextViews.nrtac,this.fortydpi,cio.NRTac+"");
+            fixTextViewHeight(allTextViews.nrtac,this.fortydpi,cellio.NRTac+"");
         }
-        updateCsv();
     }
 //    public void writeTextViews(CellInfoObj cio){
 //        cio.TimeStamp = System.currentTimeMillis();
