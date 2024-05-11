@@ -142,7 +142,16 @@ public class MainActivity extends AppCompatActivity {
             this.telephonyManager.registerTelephonyCallback(this.executorist,this.telephonyCallback);
         }
         CreateCSVFile();
-        CreateFileForUpload();
+        String[] upload_files = new String[]{
+                "upload_test1.bin",
+                "upload_test2.bin",
+                "upload_test3.bin",
+                "upload_test4.bin",
+                "upload_test5.bin"
+        };
+        for(String file : upload_files){
+            CreateFileForUpload(file);
+        }
         this.executorService = Executors.newScheduledThreadPool(1);
         executorService.scheduleAtFixedRate(new Runnable() {
             @Override
@@ -220,16 +229,18 @@ public class MainActivity extends AppCompatActivity {
             throw new RuntimeException(e);
         }
     }
-//    public void updateDownloadSpeed(Double mbps){
-//        if(mbps > 0){
-//            this.cio.Speed = mbps;
-//        }
-//    }
-//    public void updateUploadSpeed(Double mbps){
-//        if(mbps > 0){
-//            this.cio.Upload = mbps;
-//        }
-//    }
+    public void updateDownloadSpeed(Double speed){
+        if(speed> 0){
+            fixTextViewHeight(allTextViews.downloadspeed_label,this.fortydpi);
+            fixTextViewHeight(allTextViews.downloadspeed,this.fortydpi,new DecimalFormat("0.00").format(speed)+" Mbps");
+        }
+    }
+    public void updateUploadSpeed(Double speed){
+        if(speed> 0){
+            fixTextViewHeight(allTextViews.uploadspeed_label,this.fortydpi);
+            fixTextViewHeight(allTextViews.uploadspeed,this.fortydpi,new DecimalFormat("0.00").format(speed)+" Mbps");
+        }
+    }
 //    public void updatePublicIP(String ipaddress){
 //        if(ipaddress != null){
 //            this.cio.IPAddress = ipaddress;
@@ -261,6 +272,22 @@ public class MainActivity extends AppCompatActivity {
         public SpeedTestTask(CellInfoObj cellInfoObj){
             this.cellio = cellInfoObj;
             //this.cellio = new CellInfoObj();
+        }
+        public Double CalculateDownloadSpeed(int bytesRead, Double start){
+            Double endTime = Double.valueOf(System.currentTimeMillis());
+            Double totalSeconds = (endTime - start) / 1000D;
+            Double megabits = (Double.valueOf(bytesRead) * 8D) / 1048576;
+            Double download_mbps = megabits / totalSeconds;
+            updateDownloadSpeed(download_mbps);
+            return download_mbps;
+        }
+        public Double CalculateUploadSpeed(int bytesRead, Double start){
+            Double endTime = Double.valueOf(System.currentTimeMillis());
+            Double totalSeconds = (endTime - start) / 1000D;
+            Double megabits = (Double.valueOf(bytesRead) * 8D) / 1048576;
+            Double upload_mbps = megabits / totalSeconds;
+            updateUploadSpeed(upload_mbps);
+            return upload_mbps;
         }
         CellInfoObj cellio;
         //String testUrl = "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/testing.bin";
@@ -304,57 +331,92 @@ public class MainActivity extends AppCompatActivity {
         }
         private CellInfoObj DownloadTest(CellInfoObj cellios) throws IOException {
             Log.i("nr5gperf","begin download test");
-            byte[] buffer = new byte[32];
-            Double download_mbps = 0.0;
-            InputStream inputStream = ((HttpURLConnection) new URL("https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/testing.bin").openConnection()).getInputStream();
-            int bytesRead;
-            int totalBytesRead = 0;
-            Double startTime = Double.valueOf(System.currentTimeMillis());
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                totalBytesRead += bytesRead;
+            String[] urls = new String[]{
+                    "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/dtest1.bin",
+                    "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/dtest2.bin",
+                    "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/dtest3.bin",
+                    "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/dtest4.bin",
+                    "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/dtest5.bin"
+            };
+            Double[] download_speeds = new Double[5];
+//            InputStream inputStream = ((HttpURLConnection) new URL("https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/testing.bin").openConnection()).getInputStream();
+            for(int i = 0; i < urls.length; i++){
+                Double download_mbps = 0.0;
+                String uri = urls[i];
+                byte[] buffer = new byte[32];
+                InputStream inputStream = ((HttpURLConnection) new URL(uri).openConnection()).getInputStream();
+                int bytesRead;
+                int totalBytesRead = 0;
+                Double startTime = Double.valueOf(System.currentTimeMillis());
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    totalBytesRead += bytesRead;
+//                    Double currentMbps = CalculateSpeed(totalBytesRead,startTime);
+                }
+                download_mbps = CalculateDownloadSpeed(2621440,startTime);
+                download_speeds[i] = download_mbps;
+//                Double endTime = Double.valueOf(System.currentTimeMillis());
+//                Double totalSeconds = (endTime - startTime) / 1000;
+//                download_mbps = 100 / totalSeconds;
+                inputStream.close();
             }
-            Double endTime = Double.valueOf(System.currentTimeMillis());
-            Double totalSeconds = (endTime - startTime) / 1000;
-            download_mbps = 100 / totalSeconds;
-            inputStream.close();
-            Log.i("nr5gperf","download: " + download_mbps);
-            cellios.Speed = download_mbps;
+            Double sum = 0.0;
+            for(Double speed : download_speeds){
+                sum += speed;
+            }
+            Double result = sum / 5;
+            Log.i("nr5gperf","download: " + result);
+            cellios.Speed = result;
             return cellios;
 
         }
         private CellInfoObj UploadTest(CellInfoObj cellios) throws IOException {
             Log.i("nr5gperf","begin upload test");
-            File f = new File(MainActivity.this.getExternalFilesDir(null),"upload_test.bin");
-            long size = f.length();
-            FileInputStream fileInputStream = new FileInputStream(f);
-            System.out.println(size +" bytes in upload file");
-            byte[] bufferUp = new byte[32];
-            Double upload_mbps = 0.0;
-            Double startTimeUp = Double.valueOf(System.currentTimeMillis());
-            HttpURLConnection connection = (HttpURLConnection) new URL("https://fast.nanick.org/upload.php").openConnection();
-            connection.setRequestMethod("POST");
-            connection.setDoOutput(true);
-            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + "----WebKitFormBoundary0CEaUEFum5RO9St7");
-            OutputStream os = connection.getOutputStream();
-            DataOutputStream outputStream = new DataOutputStream(os);
-            outputStream.writeBytes(this.begin_multipart);
-            int bytesReadUp;
-            while ((bytesReadUp = fileInputStream.read(bufferUp)) != -1) {
-                outputStream.write(bufferUp, 0, bytesReadUp);
+            String[] upload_files = new String[]{
+                    "upload_test1.bin",
+                    "upload_test2.bin",
+                    "upload_test3.bin",
+                    "upload_test4.bin",
+                    "upload_test5.bin"
+            };
+            Double[] upload_speeds = new Double[5];
+            for(int i = 0; i < upload_files.length; i++){
+                String ufile = upload_files[i];
+                File f = new File(MainActivity.this.getExternalFilesDir(null),ufile);
+                long size = f.length();
+                FileInputStream fileInputStream = new FileInputStream(f);
+                System.out.println(size +" bytes in upload file");
+                byte[] bufferUp = new byte[32];
+                Double upload_mbps = 0.0;
+                Double startTimeUp = Double.valueOf(System.currentTimeMillis());
+                HttpURLConnection connection = (HttpURLConnection) new URL("https://fast.nanick.org/upload.php").openConnection();
+                connection.setRequestMethod("POST");
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + "----WebKitFormBoundary0CEaUEFum5RO9St7");
+                OutputStream os = connection.getOutputStream();
+                DataOutputStream outputStream = new DataOutputStream(os);
+                outputStream.writeBytes(this.begin_multipart);
+                int bytesReadUp;
+                while ((bytesReadUp = fileInputStream.read(bufferUp)) != -1) {
+                    outputStream.write(bufferUp, 0, bytesReadUp);
+                }
+                outputStream.writeBytes(this.end_multipart);
+                fileInputStream.close();
+                outputStream.flush();
+                outputStream.close();
+                os.close();
+                connection.getInputStream().close();
+                int responseCode = connection.getResponseCode();
+                upload_mbps = CalculateUploadSpeed(262144,startTimeUp);
+                upload_speeds[i] = upload_mbps;
+                connection.disconnect();
             }
-            outputStream.writeBytes(this.end_multipart);
-            fileInputStream.close();
-            outputStream.flush();
-            outputStream.close();
-            os.close();
-            connection.getInputStream().close();
-            int responseCode = connection.getResponseCode();
-            Double endTimeUp = Double.valueOf(System.currentTimeMillis());
-            Double totalSecondsUp = (endTimeUp - startTimeUp) / 1000;
-            upload_mbps = 10 / totalSecondsUp;
-            connection.disconnect();
-            Log.i("nr5gperf","upload: " + upload_mbps);
-            cellios.Upload = upload_mbps;
+            Double sum = 0.0;
+            for(Double speed : upload_speeds){
+                sum += speed;
+            }
+            Double result = sum / 5;
+            Log.i("nr5gperf","upload: " + result);
+            cellios.Upload = result;
             return cellios;
 
         }
@@ -620,8 +682,8 @@ public class MainActivity extends AppCompatActivity {
             throw new RuntimeException(e);
         }
     }
-    public void CreateFileForUpload(){
-        File upload_file = new File(MainActivity.this.getExternalFilesDir(null),"upload_test.bin");
+    public void CreateFileForUpload(String filename){
+        File upload_file = new File(MainActivity.this.getExternalFilesDir(null),filename);
         try {
             if(upload_file.exists()){
                 Log.i("nr5gperf", "upload_file.bin already exists");
@@ -630,7 +692,7 @@ public class MainActivity extends AppCompatActivity {
                     FileOutputStream outp = new FileOutputStream(upload_file);
                     Log.i("nr5gperf","Creating file with 1.25 MB random bytes");
                     Random rd = new Random();
-                    byte[] bytera = new byte[1310720];
+                    byte[] bytera = new byte[262144];
                     rd.nextBytes(bytera);
                     IOUtils.write(bytera,outp);
                     Log.i("nr5gperf","Done creating file with 1.25 MB random bytes");
