@@ -83,6 +83,7 @@ import java.util.Random;
 import org.apache.commons.io.IOUtils;
 
 public class MainActivity extends AppCompatActivity {
+    public Integer csvRowNumber = 0;
     public CellInfoObj cio = null;
     private TelephonyManager telephonyManager;
     public Double Latitude;
@@ -223,6 +224,7 @@ public class MainActivity extends AppCompatActivity {
             csv_writer = new FileWriter(csv,true);
             csv_writer.write(csv_string);
             csv_writer.close();
+            this.csvRowNumber++;
 //            this.cio.Speed = 0.0;
 //            this.cio.Upload = 0.0;
         } catch (IOException e) {
@@ -326,8 +328,8 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(CellInfoObj results) {
             Log.i("nr5gperf","onPostExecute");
 
-            updateTextViews(results);
             updateCsv(results);
+            updateTextViews(results);
         }
         private CellInfoObj DownloadTest(CellInfoObj cellios) throws IOException {
             Log.i("nr5gperf","begin download test");
@@ -503,6 +505,8 @@ public class MainActivity extends AppCompatActivity {
         });
     }
     public void writeTextViews(CellInfoObj cellio){
+        fixTextViewHeight(allTextViews.rows,this.fortydpi,this.csvRowNumber+"");
+        fixTextViewHeight(allTextViews.rows_label,this.fortydpi);
         fixTextViewHeight(allTextViews.rsrp,this.fortydpi,cellio.Rsrp+" dBm");
         fixTextViewHeight(allTextViews.rsrp_label,this.fortydpi);
         if(cellio.SsRsrp != 0){
@@ -1044,6 +1048,7 @@ public class MainActivity extends AppCompatActivity {
     public class AllTextViews {
         public AllTextViews(){
         }
+        public TextView rows = ((TextView)findViewById(R.id.rows));
         public TextView rsrp = ((TextView)findViewById(R.id.rsrp));
         public TextView ssrsrp = ((TextView)findViewById(R.id.ssrsrp));
         public TextView downloadspeed = ((TextView)findViewById(R.id.downloadspeed));
@@ -1068,6 +1073,7 @@ public class MainActivity extends AppCompatActivity {
         public TextView nrspectrum = ((TextView)findViewById(R.id.nrspectrum));
         public TextView nrpci = ((TextView)findViewById(R.id.nrpci));
         public TextView nrtac = ((TextView)findViewById(R.id.nrtac));
+        public TextView rows_label = ((TextView)findViewById(R.id.rows_label));
         public TextView rsrp_label = ((TextView)findViewById(R.id.rsrp_label));
         public TextView ssrsrp_label = ((TextView)findViewById(R.id.ssrsrp_label));
         public TextView downloadspeed_label = ((TextView)findViewById(R.id.downloadspeed_label));
