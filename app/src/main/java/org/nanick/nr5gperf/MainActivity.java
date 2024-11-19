@@ -292,7 +292,7 @@ public class MainActivity extends AppCompatActivity {
             return upload_mbps;
         }
         CellInfoObj cellio;
-        //String testUrl = "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/testing.bin";
+        //String testUrl = "https://storage.googleapis.com/nlp-137cf635-6c92-49b5-b943-f5c8c75e686f/testing.bin";
         String begin_multipart = "------WebKitFormBoundary0CEaUEFum5RO9St7\nContent-Disposition: form-data; name=\"uploadfile[]\"; filename=\"upload_test.bin\"\nContent-Type: application/octet-stream\n\n";
         String end_multipart = "\n------WebKitFormBoundary0CEaUEFum5RO9St7\nContent-Disposition: form-data; name=\"submit\"\n\nSubmit\n------WebKitFormBoundary0CEaUEFum5RO9St7--\n\n";
         @Override
@@ -334,14 +334,14 @@ public class MainActivity extends AppCompatActivity {
         private CellInfoObj DownloadTest(CellInfoObj cellios) throws IOException {
             Log.i("nr5gperf","begin download test");
             String[] urls = new String[]{
-                    "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/dtest1.bin",
-                    "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/dtest2.bin",
-                    "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/dtest3.bin",
-                    "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/dtest4.bin",
-                    "https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/dtest5.bin"
+                    "https://storage.googleapis.com/nlp-137cf635-6c92-49b5-b943-f5c8c75e686f/dtest1.bin",
+                    "https://storage.googleapis.com/nlp-137cf635-6c92-49b5-b943-f5c8c75e686f/dtest2.bin",
+                    "https://storage.googleapis.com/nlp-137cf635-6c92-49b5-b943-f5c8c75e686f/dtest3.bin",
+                    "https://storage.googleapis.com/nlp-137cf635-6c92-49b5-b943-f5c8c75e686f/dtest4.bin",
+                    "https://storage.googleapis.com/nlp-137cf635-6c92-49b5-b943-f5c8c75e686f/dtest5.bin"
             };
             Double[] download_speeds = new Double[5];
-//            InputStream inputStream = ((HttpURLConnection) new URL("https://nlp-137cf635-6c92-49b5-b943-f5c8c75e686f.s3.us-east-2.amazonaws.com/testing.bin").openConnection()).getInputStream();
+//            InputStream inputStream = ((HttpURLConnection) new URL("https://storage.googleapis.com/nlp-137cf635-6c92-49b5-b943-f5c8c75e686f/testing.bin").openConnection()).getInputStream();
             for(int i = 0; i < urls.length; i++){
                 Double download_mbps = 0.0;
                 String uri = urls[i];
