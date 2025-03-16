@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace 'org.nanick.nr5gperf'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "org.nanick.nr5gperf"
