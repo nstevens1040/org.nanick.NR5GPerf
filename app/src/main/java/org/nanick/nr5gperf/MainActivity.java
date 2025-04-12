@@ -1112,13 +1112,13 @@ public class MainActivity extends AppCompatActivity {
                         CellInfoNr cinr = (CellInfoNr) cellInfos;
                         CellSignalStrengthNr signalStrengthNr = (CellSignalStrengthNr) ((CellInfoNr) cellInfos).getCellSignalStrength();
                         CellIdentityNr cellIdNr = (CellIdentityNr) ((CellInfoNr) cellInfos).getCellIdentity();
-                        long cellnci = cellIdNr.getNci();
+                        //long cellnci = cellIdNr.getNci();
                         cio.NRARFCN = cellIdNr.getNrarfcn();
                         cio.NRPci = cellIdNr.getPci();
                         cio.NRTac = cellIdNr.getTac();
-                        if (cellnci != Long.MAX_VALUE) {
-                            cio.CellId = cellnci;
-                        }
+                        // if (cellnci != Long.MAX_VALUE) {
+                        //     cio.CellId = cellnci;
+                        // }
                         int ssrsrp = signalStrengthNr.getSsRsrp();
                         if (ssrsrp == Integer.MAX_VALUE) {
                             ssrsrp = signalStrengthNr.getCsiRsrp();
@@ -1126,15 +1126,15 @@ public class MainActivity extends AppCompatActivity {
                         if (ssrsrp != Integer.MAX_VALUE) {
                             cio.SsRsrp = ssrsrp;
                         }
-                        cio.Pci = cellIdNr.getPci();
+                        //cio.Pci = cellIdNr.getPci();
                         cio.Rsrp = signalStrengthNr.getDbm();
                         cio.Rsrq = signalStrengthNr.getSsRsrq();
                         //cio.Snr = signalStrengthLte.getRssnr();
-                        cio.Tac = cellIdNr.getTac();
-                        cio.eNodeB = Math.floorDiv(cio.CellId, 4096L);
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                            cio.TimingAdvance = signalStrengthNr.getTimingAdvanceMicros();
-                        }
+                        //cio.Tac = cellIdNr.getTac();
+                        //cio.eNodeB = Math.floorDiv(cio.CellId, 4096L);
+                        // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        //     cio.TimingAdvance = signalStrengthNr.getTimingAdvanceMicros();
+                        // }
                         Boolean found = false;
                         ArrayList<Nr5GBands> five1 = new ArrayList<Nr5GBands>();
                         for (int a = 0; a < this.nr5gbands.length; a++) {
