@@ -1109,9 +1109,9 @@ public class MainActivity extends AppCompatActivity {
                 }
                 if(!pCellIsNR){
                     if(cellInfos instanceof CellInfoNr) {
-                        CellInfoNr cinr = (CellInfoNr) cellInfo;
-                        CellSignalStrengthNr signalStrengthNr = (CellSignalStrengthNr) ((CellInfoNr) cellInfo).getCellSignalStrength();
-                        CellIdentityNr cellIdNr = (CellIdentityNr) ((CellInfoNr) cellInfo).getCellIdentity();
+                        CellInfoNr cinr = (CellInfoNr) cellInfos;
+                        CellSignalStrengthNr signalStrengthNr = (CellSignalStrengthNr) ((CellInfoNr) cellInfos).getCellSignalStrength();
+                        CellIdentityNr cellIdNr = (CellIdentityNr) ((CellInfoNr) cellInfos).getCellIdentity();
                         long cellnci = cellIdNr.getNci();
                         cio.NRARFCN = cellIdNr.getNrarfcn();
                         cio.NRPci = cellIdNr.getPci();
